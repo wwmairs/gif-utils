@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+
+import sys
+from PIL import Image 
+
+
+if len(sys.argv) < 2:
+    print("please supply a filename !")
+    exit()
+
+filename = sys.argv[1]
+
+colornames = {
+    (52, 165, 94): "green",
+    (211, 94, 84): "crimson",
+    (241, 94, 83): "crimson",
+    (64, 112, 97): "hunter green",
+    (5, 113, 96): "hunter green",
+    (230, 167, 71): "melon",
+    (250, 169, 60): "melon",
+    (78, 128, 193): "sky blue",
+    (34, 129, 197): "sky blue",
+}
+
+def getcolors(img):
+    colors = []
+    palette = img.getpalette()
+    print(palette);
+    numcolors = int(len(palette) / 3)
+    for i in range(numcolors):
+        r_index = i * 3
+        g_index = i * 3 + 1
+        b_index = i * 3 + 2
+        r = palette[r_index]
+        g = palette[g_index]
+        b = palette[b_index]
+        colors.append((r, g, b))
+
+    return colors
+   
+
+
+with Image.open(filename) as img:
+    width, height = img.size
+    colors = getcolors(img)
+    original_pixels = list(img.getdata())
+    for i in range(len(colors)):
+        color = colors[i]
+        if any(x == 0 for x in original_pixels):
+            selectedpixels = list(map(lambda x : 0 if x == i else 1, original_pixels))
+            bitmap = Image.new("1", img.size)
+            bitmap.putdata(selectedpixels)
+            filename = str(color) if color not in colornames else colornames[color]
+            bitmap.save(filename + ".png")
+
+# make bitmap for each palette color
+# iterate through pixels, check which palette index, toggle bit in corresponding bitmap
+# save, but ignore white, probably
+    
