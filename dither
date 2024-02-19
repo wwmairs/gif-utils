@@ -5,34 +5,73 @@ from pathlib import Path
 from PIL import Image, ImagePalette
 import numpy as np
 
+colors = {
+    "warmred" : [255, 102, 94],
+    "processblue" : [0, 133, 202],
+    "processyellow" : [255, 242, 0],
+    "melon" : [255, 174, 59],
+    "crimson" : [228, 93, 80],
+    "aqua" : [94, 200, 229],
+    "green": [0, 169, 92],
+    "huntergreen" : [64, 112, 96],
+    "white" : [255, 255, 255],
+    "black" : [0, 0, 0]
+}
+
+colormap = []
+colornames = []
+filename = None
+shouldsave = False
+
+
 def randcolor():
     return random.randint(0, 255)
 
 def randbit():
     return random.getrandbits(1)
 
-shouldsave = False
+def getcolors(args):
+    arg = args[0]
+    if arg[0] == "-":
+        parseargs(args)
+        return 
+    try:
+        foundcolor = colors[arg]
+    except:
+        exit(f"undefined color: {arg}")
 
-if len(sys.argv) < 2:
-    print("please supply a filename")
-    exit()
+    colormap.extend(foundcolor)
+    colornames.append(arg)
 
-filename = sys.argv[1]
+    if len(args) > 1:
+        getcolors(args[1:])
+    elif len(colormap) == 0:
+        exit("-c usage: 'dither filename -c <clr1 clr2> ...'")
 
-for arg in sys.argv:
+def parseargs(args):
+    global filename, shouldsave
+    if not filename:
+        try:
+            filename = args[0]
+        except:
+            exit("please supply a filename\nusage: 'dither filename'")
+
+    arg = args[0]        
+        
+    if arg == "-c":
+        getcolors(args[1:])
+
     if arg == "-s":
         shouldsave = True
 
+    if len(args) > 1:
+        parseargs(args[1:])
 
-colormap = [
-    255, 174, 59,  # melon
-    228, 93, 80,   # crimson
-    94, 200, 229,  # aqua
-    0, 169, 92,    # green
-    64, 112, 96,   # hunter green
-    255, 255, 255, # white
-    0, 0, 0        # black
-]
+parseargs(sys.argv[1:])
+
+if len(colormap) == 0:
+    colormap.extend([255, 255, 255, 0, 0, 0])
+
 
 colormap = np.array(colormap, dtype=np.uint8)
 palette = ImagePalette.ImagePalette(mode="RGB", palette=colormap.tobytes())
@@ -42,6 +81,9 @@ with Image.open(filename) as img_in:
     palette_img.putpalette(palette)
     img_out = img_in.quantize(palette=palette_img, 
                               method=Image.Quantize.FASTOCTREE)
+    if shouldsave:
+        img_out.save(f"{filename.split('.')[0]}.{'-'.join(colornames)}.gif")
 
-img_out.save("test.gif")
+    img_out.convert("RGB").show()
+
 
