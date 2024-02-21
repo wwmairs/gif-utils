@@ -9,6 +9,9 @@ colors = {
     "warmred" : [255, 102, 94],
     "processblue" : [0, 133, 202],
     "processyellow" : [255, 242, 0],
+    "rubinered" : [206, 0, 88],
+    "rhodaminered" : [225, 0, 152],
+    "reflexblue" : [0, 20, 137],
     "melon" : [255, 174, 59],
     "crimson" : [228, 93, 80],
     "aqua" : [94, 200, 229],
@@ -22,6 +25,7 @@ colormap = []
 colornames = []
 filename = None
 shouldsave = False
+shouldmakeseps = False
 
 
 def randcolor():
@@ -49,7 +53,7 @@ def getcolors(args):
         exit("-c usage: 'dither filename -c <clr1 clr2> ...'")
 
 def parseargs(args):
-    global filename, shouldsave
+    global filename, shouldsave, shouldmakeseps
     if not filename:
         try:
             filename = args[0]
@@ -61,29 +65,63 @@ def parseargs(args):
     if arg == "-c":
         getcolors(args[1:])
 
-    if arg == "-s":
+    if arg == "-w":
         shouldsave = True
+
+    if arg == "-s":
+        shouldmakeseps = True
 
     if len(args) > 1:
         parseargs(args[1:])
 
-parseargs(sys.argv[1:])
-
-if len(colormap) == 0:
-    colormap.extend([255, 255, 255, 0, 0, 0])
-
-
-colormap = np.array(colormap, dtype=np.uint8)
-palette = ImagePalette.ImagePalette(mode="RGB", palette=colormap.tobytes())
-
-with Image.open(filename) as img_in:
-    palette_img = Image.new("P", img_in.size)
-    palette_img.putpalette(palette)
-    img_out = img_in.quantize(palette=palette_img, 
-                              method=Image.Quantize.FASTOCTREE)
-    if shouldsave:
-        img_out.save(f"{filename.split('.')[0]}.{'-'.join(colornames)}.gif")
-
-    img_out.convert("RGB").show()
+def getcolorsfromimg(img):
+    colors = []
+    palette = img.getpalette()
+    for i in range(0, len(palette), 3):
+        colors.append(palette[i:i+3])
+    
+    return colors
 
 
+def makeseps(img):
+    imgcolors = getcolorsfromimg(img)
+    original_pixels = list(img.getdata())
+    pixels_by_index = [list(map(lambda x : 0 if x== i else 1, original_pixels)) for i in range(len(imgcolors))]
+    for i, selectedpixels in enumerate(pixels_by_index):
+        bitmap = Image.new("1", img.size)
+        bitmap.putdata(selectedpixels)
+        colorvalue = imgcolors[i]
+        colorname = colorvalue
+        if colorvalue in colors.values():
+            foundindex = list(colors.values()).index(colorvalue)
+            colorname = list(colors.keys())[foundindex]
+
+        bitmap.save(f"{filename.split('.')[0]}.{'-'.join(colornames)}.sep.{colorname}.png")
+
+
+def main():
+    global colormap, filename, shouldsave, shouldmakeseps
+    parseargs(sys.argv[1:])
+    
+    if len(colormap) == 0:
+        colormap.extend([255, 255, 255, 0, 0, 0])
+    
+    
+    colormap = np.array(colormap, dtype=np.uint8)
+    colornames.sort()
+    palette = ImagePalette.ImagePalette(mode="RGB", palette=colormap.tobytes())
+    
+    with Image.open(filename) as img_in:
+        palette_img = Image.new("P", img_in.size)
+        palette_img.putpalette(palette)
+        img_out = img_in.quantize(palette=palette_img, 
+                                  method=Image.Quantize.FASTOCTREE)
+        if shouldsave:
+            img_out.save(f"{filename.split('.')[0]}.{'-'.join(colornames)}.gif")
+
+        if shouldmakeseps:
+            makeseps(img_out)
+    
+        img_out.convert("RGB").show()
+
+main()
