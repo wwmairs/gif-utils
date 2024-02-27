@@ -17,6 +17,7 @@ colors = {
     "aqua" : [94, 200, 229],
     "green": [0, 169, 92],
     "huntergreen" : [64, 112, 96],
+    "sky" : [73, 130, 207],
     "white" : [255, 255, 255],
     "black" : [0, 0, 0]
 }
@@ -70,6 +71,13 @@ def parseargs(args):
 
     if arg == "-s":
         shouldmakeseps = True
+
+    if arg == "-h":
+        print("dither filename -c <clr1 clr2>")
+        print("\t -c \t specifies index colors by name")
+        print("\t -w \t writes gif")
+        print("\t -s \t saves color separations")
+        exit(f"\t defined colors: {', '.join(colors.keys())}")
 
     if len(args) > 1:
         parseargs(args[1:])
